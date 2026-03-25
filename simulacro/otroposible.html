@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Examen Final: Eventos, Cookies y PDF</title>
+
+  <!-- Librería para generar PDFs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  
+  <!-- Fuentes necesarias para pdfMake -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+  <!-- Librería para crear gráficas -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Estilo general del body */
+    body { font-family: Arial, sans-serif; margin: 30px; }
+
+    /* Contenedor principal */
+    .contenedor { max-width: 900px; }
+
+    /* Espaciado entre campos */
+    .campo { margin-bottom: 15px; }
+
+    /* Estilo de etiquetas */
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+
+    /* Inputs ocupan todo el ancho */
+    input { width: 100%; padding: 8px; box-sizing: border-box; }
+
+    /* Contenedor de botones */
+    .botones { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Estilo botones */
+    button { padding: 10px 15px; cursor: pointer; }
+    
+    /* Clase que se añade cuando el input tiene foco */
+    .focused { outline: 2px solid steelblue; background-color: #eef6ff; }
+
+    /* Mensaje informativo */
+    #mensaje { margin-top: 15px; font-weight: bold; color: #2c3e50; }
+
+    /* Iframe para previsualizar PDF */
+    iframe { width: 100%; height: 500px; border: 1px solid #ccc; margin-top: 20px; }
+  </style>
+</head>
+
+<body>
+
+  <div class="contenedor">
+    <h1>Panel de Control de Eventos</h1>
+
+    <!-- INPUT 1 -->
+    <div class="campo">
+      <label for="input1">Primer input (Cuenta 'A')</label>
+      <input type="text" id="input1" placeholder="Escribe aquí...">
+    </div>
+
+    <!-- INPUT 2 -->
+    <div class="campo">
+      <label for="input2">Segundo input (Cuenta 'E')</label>
+      <input type="text" id="input2" placeholder="Escribe aquí...">
+    </div>
+
+    <!-- INPUT 3 (EMAIL) -->
+    <div class="campo">
+      <label for="input3">Validación de Email (Extra)</label>
+      <input type="email" id="input3" placeholder="ejemplo@correo.com">
+    </div>
+
+    <!-- BOTONES -->
+    <div class="botones">
+      <button id="guardarCookie">Guardar en Cookie</button>
+      <button id="borrarCookie">Borrar Cookie</button>
+      <button id="verPdf">Ver PDF en Iframe</button>
+      <button id="abrirPdf">Abrir PDF en Pestaña</button>
+    </div>
+
+    <p id="mensaje"></p>
+
+    <h2>Previsualización PDF</h2>
+    <iframe id="previewPdf"></iframe>
+  </div>
+
+  <script>
+
+    // =====================================================
+    // 1. REFERENCIAS AL DOM
+    // =====================================================
+    // Guardamos referencias a elementos HTML para usarlos en JS
+    const input1 = document.getElementById("input1");
+    const input2 = document.getElementById("input2");
+    const input3 = document.getElementById("input3");
+    const mensaje = document.getElementById("mensaje");
+    const iframe = document.getElementById("previewPdf");
+
+    // =====================================================
+    // 2. FUNCIONES DE COOKIES
+    // =====================================================
+
+    // Guarda una cookie con nombre, valor y duración en días
+    function setCookie(nombre, valor, dias) {
+        const d = new Date();
+
+        // Calculamos la fecha de expiración
+        d.setTime(d.getTime() + (dias * 24 * 60 * 60 * 1000));
+
+        let expires = "expires=" + d.toUTCString();
+
+        // Guardamos la cookie codificando el valor
+        document.cookie = nombre + "=" + encodeURIComponent(valor) + ";" + expires + ";path=/";
+    }
+
+    // Obtiene una cookie por nombre
+    function getCookie(nombre) {
+        let name = nombre + "=";
+
+        // Separamos todas las cookies
+        let lista = document.cookie.split(';');
+
+        for(let i = 0; i < lista.length; i++) {
+            let c = lista[i].trim();
+
+            // Si empieza por el nombre buscado, devolvemos su valor
+            if (c.indexOf(name) == 0) {
+                return decodeURIComponent(c.substring(name.length, c.length));
+            }
+        }
+
+        return null;
+    }
+
+    // =====================================================
+    // 3. ESTADO INICIAL
+    // =====================================================
+
+    // Creamos el objeto con contadores
+    function crearEstadoInicial() {
+        return {
+            input1: { focus: 0, blur: 0, change: 0, tecla_a: 0 },
+            input2: { focus: 0, blur: 0, change: 0, tecla_e: 0 }
+        };
+    }
+
+    // Variable global con estadísticas
+    let estadisticas = crearEstadoInicial();
+
+    // Carga datos desde cookie
+    function cargarDatos() {
+        const datos = getCookie("estadisticasFormulario");
+
+        if (datos) {
+            try {
+                // Convertimos texto JSON a objeto JS
+                estadisticas = JSON.parse(datos);
+                mensaje.textContent = "Datos cargados desde la cookie.";
+            } catch(e) {
+                estadisticas = crearEstadoInicial();
+            }
+        } else {
+            mensaje.textContent = "Sin datos previos.";
+        }
+    }
+
+    // =====================================================
+    // 4. EVENTOS DE LOS INPUTS
+    // =====================================================
+
+    // INPUT 1
+    input1.addEventListener("focus", () => {
+        estadisticas.input1.focus++;
+        input1.classList.add("focused");
+    });
+
+    input1.addEventListener("blur", () => {
+        estadisticas.input1.blur++;
+        input1.classList.remove("focused");
+    });
+
+    input1.addEventListener("change", () => {
+        estadisticas.input1.change++;
+    });
+
+    input1.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() === "a") {
+            estadisticas.input1.tecla_a++;
+        }
+    });
+
+    // INPUT 2
+    input2.addEventListener("focus", () => {
+        estadisticas.input2.focus++;
+        input2.classList.add("focused");
+    });
+
+    input2.addEventListener("blur", () => {
+        estadisticas.input2.blur++;
+        input2.classList.remove("focused");
+    });
+
+    input2.addEventListener("change", () => {
+        estadisticas.input2.change++;
+    });
+
+    input2.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() === "e") {
+            estadisticas.input2.tecla_e++;
+        }
+    });
+
+    // VALIDACIÓN DE EMAIL EN TIEMPO REAL
+    input3.addEventListener("input", function() {
+
+        // Expresión regular para validar email
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        // Cambia el borde según sea válido o no
+        input3.style.border = regex.test(input3.value)
+            ? "2px solid green"
+            : "2px solid red";
+    });
+
+    // =====================================================
+    // 5. BOTONES (COOKIES)
+    // =====================================================
+
+    // Guardar datos en cookie
+    document.getElementById("guardarCookie").onclick = () => {
+        setCookie("estadisticasFormulario", JSON.stringify(estadisticas), 7);
+        mensaje.textContent = "Cookie guardada!";
+    };
+
+    // Borrar cookie
+    document.getElementById("borrarCookie").onclick = () => {
+        document.cookie = "estadisticasFormulario=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        estadisticas = crearEstadoInicial();
+        mensaje.textContent = "Cookie borrada.";
+    };
+
+    // =====================================================
+    // 6. GRÁFICA (CHART.JS)
+    // =====================================================
+
+    function generarImagenGrafico() {
+        const canvas = document.createElement("canvas");
+        canvas.width = 800;
+        canvas.height = 400;
+
+        const ctx = canvas.getContext("2d");
+
+        // Creamos gráfica de barras
+        const miGrafica = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["i1 Focus", "i1 Blur", "i1 Change", "i1 A", "i2 Focus", "i2 Blur", "i2 Change", "i2 E"],
+                datasets: [{
+                    label: 'Eventos',
+                    data: [
+                        estadisticas.input1.focus,
+                        estadisticas.input1.blur,
+                        estadisticas.input1.change,
+                        estadisticas.input1.tecla_a,
+                        estadisticas.input2.focus,
+                        estadisticas.input2.blur,
+                        estadisticas.input2.change,
+                        estadisticas.input2.tecla_e
+                    ]
+                }]
+            },
+            options: { responsive: false, animation: false }
+        });
+
+        // Convertimos a imagen base64
+        const imgBase64 = canvas.toDataURL("image/png");
+
+        miGrafica.destroy();
+
+        return imgBase64;
+    }
+
+    // =====================================================
+    // 7. PDF
+    // =====================================================
+
+    function generarCuerpoTabla() {
+
+        let filas = [
+            ["Input", "Evento", "Cantidad"]
+        ];
+
+        let total = 0;
+
+        let datos = [
+            ["Input1","Focus",estadisticas.input1.focus],
+            ["Input1","Blur",estadisticas.input1.blur]
+        ];
+
+        datos.forEach(d => {
+            filas.push(d);
+            total += d[2];
+        });
+
+        filas.push(["TOTAL","",total]);
+
+        return filas;
+    }
+
+    function crearDefinicionPDF(img) {
+        return {
+            content: [
+                { text: "INFORME", fontSize: 18 },
+                { text: "Tabla:" },
+                {
+                    table: {
+                        body: generarCuerpoTabla()
+                    }
+                },
+                { text: "Gráfica:" },
+                { image: img, width: 400 }
+            ]
+        };
+    }
+
+    // =====================================================
+    // 8. BOTONES PDF
+    // =====================================================
+
+    document.getElementById("verPdf").onclick = () => {
+        const img = generarImagenGrafico();
+        const doc = crearDefinicionPDF(img);
+
+        pdfMake.createPdf(doc).getBlob((blob) => {
+            iframe.src = URL.createObjectURL(blob);
+        });
+    };
+
+    document.getElementById("abrirPdf").onclick = () => {
+        const img = generarImagenGrafico();
+        const doc = crearDefinicionPDF(img);
+
+        pdfMake.createPdf(doc).open();
+    };
+
+    // INICIO
+    cargarDatos();
+
+  </script>
+</body>
+</html>
+
+// Eventos usados:
+focus → cuando entras al input
+blur → cuando sales
+change → cuando cambias valor y sales
+keydown → cuando pulsas tecla
+Cookies:
+setCookie() → guarda datos
+getCookie() → los recupera
+Se usa JSON.stringify() y JSON.parse()
+Chart.js:
+Crea gráfica en canvas
+Se convierte a imagen con toDataURL()
+PDFMake:
+Genera PDF con texto + tabla + imagen
+.open() → nueva pestaña
+.getBlob() → mostrar en iframe//

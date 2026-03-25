@@ -1,0 +1,260 @@
+<script>
+
+// =====================================================
+// EVENTOS DEL PRIMER INPUT
+// =====================================================
+
+// TODO 1:
+// Crear el listener que cuenta cuántas veces el usuario entra en foco en el primer input.
+// Debe incrementar el contador correspondiente dentro de estadisticas.input1.
+// Además, debe aplicar al primer input la clase CSS exacta llamada focused.
+input1.addEventListener("focus", () => {
+  estadisticas.input1.focus++; // suma 1 al contador
+  input1.classList.add("focused"); // añade estilo visual
+});
+
+// TODO 2:
+// Crear el listener que cuenta cuántas veces el usuario sale de foco del primer input.
+// Debe incrementar el contador correspondiente dentro de estadisticas.input1.
+// Además, debe quitar del primer input la clase CSS exacta llamada focused.
+input1.addEventListener("blur", () => {
+  estadisticas.input1.blur++;
+  input1.classList.remove("focused");
+});
+
+// TODO 3:
+// Crear el listener que cuenta cuántas veces cambia el valor del primer input.
+input1.addEventListener("change", () => {
+  estadisticas.input1.change++;
+});
+
+// TODO 4:
+// Crear el listener de teclado del primer input.
+// Solo debe contar las pulsaciones de la letra a.
+input1.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "a") {
+    estadisticas.input1.tecla_a++;
+  }
+});
+
+// =====================================================
+// EVENTOS DEL SEGUNDO INPUT
+// =====================================================
+
+// TODO 5:
+input2.addEventListener("focus", () => {
+  estadisticas.input2.focus++;
+  input2.classList.add("focused");
+});
+
+// TODO 6:
+input2.addEventListener("blur", () => {
+  estadisticas.input2.blur++;
+  input2.classList.remove("focused");
+});
+
+// TODO 7:
+input2.addEventListener("change", () => {
+  estadisticas.input2.change++;
+});
+
+// TODO 8:
+input2.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "e") {
+    estadisticas.input2.tecla_e++;
+  }
+});
+
+// =====================================================
+// EVENTOS DE LOS BOTONES DE COOKIES
+// =====================================================
+
+// TODO 9:
+// Guardar JSON en cookie
+botonGuardar.onclick = () => {
+  setCookie("estadisticasFormulario", JSON.stringify(estadisticas), 7);
+  mensaje.textContent = "Cookie guardada correctamente.";
+};
+
+// TODO 29 (AMPLIACIÓN):
+// Guardar también la fecha en cookie
+// Se suele pedir en exámenes más largos
+botonGuardar.onclick = () => {
+  setCookie("estadisticasFormulario", JSON.stringify(estadisticas), 7);
+  setCookie("fechaGuardado", new Date().toISOString(), 7); // fecha extra
+  mensaje.textContent = "Cookie guardada correctamente.";
+};
+
+// TODO 10:
+// Borrar cookie y reiniciar datos
+botonBorrar.onclick = () => {
+  deleteCookie("estadisticasFormulario");
+  estadisticas = crearEstadoInicial();
+  mensaje.textContent = "Cookie eliminada y JSON reiniciado.";
+};
+
+// =====================================================
+// FUNCIONES AUXILIARES PARA TABLA Y GRÁFICA
+// =====================================================
+
+// TODO 11:
+// Generar las filas de la tabla
+function obtenerDatosTabla() {
+  return [
+    ["input1", "focus", estadisticas.input1.focus],
+    ["input1", "blur", estadisticas.input1.blur],
+    ["input1", "change", estadisticas.input1.change],
+    ["input1", "tecla_a", estadisticas.input1.tecla_a],
+    ["input2", "focus", estadisticas.input2.focus],
+    ["input2", "blur", estadisticas.input2.blur],
+    ["input2", "change", estadisticas.input2.change],
+    ["input2", "tecla_e", estadisticas.input2.tecla_e]
+  ];
+}
+
+// TODO 12:
+// Valores para la gráfica
+function obtenerValoresGrafico() {
+  return [
+    estadisticas.input1.focus,
+    estadisticas.input1.blur,
+    estadisticas.input1.change,
+    estadisticas.input1.tecla_a,
+    estadisticas.input2.focus,
+    estadisticas.input2.blur,
+    estadisticas.input2.change,
+    estadisticas.input2.tecla_e
+  ];
+}
+
+// =====================================================
+// GRÁFICA
+// =====================================================
+
+// TODO 13 y 14:
+// Labels y datos
+labels: obtenerLabelsGrafico(),
+data: obtenerValoresGrafico(),
+
+// TODO 28 (AMPLIACIÓN):
+// Añadir segundo dataset
+datasets: [
+  {
+    label: "Input1",
+    data: [
+      estadisticas.input1.focus,
+      estadisticas.input1.blur,
+      estadisticas.input1.change,
+      estadisticas.input1.tecla_a
+    ]
+  },
+  {
+    label: "Input2",
+    data: [
+      estadisticas.input2.focus,
+      estadisticas.input2.blur,
+      estadisticas.input2.change,
+      estadisticas.input2.tecla_e
+    ]
+  }
+]
+
+// =====================================================
+// PDF
+// =====================================================
+
+// TODO 15:
+// Info del documento
+title: "Informe de estadísticas",
+author: "Alumno",
+
+// TODO 16:
+// Footer dinámico (MUY IMPORTANTE)
+footer: function(currentPage, pageCount) {
+  return {
+    columns: [
+      { text: "Generado automáticamente con pdfMake", margin: [40, 0] },
+      { text: currentPage + " de " + pageCount, alignment: "right", margin: [0, 0, 40, 0] }
+    ]
+  };
+},
+
+// TODO 17 y 18:
+{ text: "Fecha: " + fechaHoyES() },
+{ text: "Responsable: Alumno / Aplicación", alignment: "right" },
+
+// TODO 30 (AMPLIACIÓN):
+// Mostrar fecha guardada
+const fecha = getCookie("fechaGuardado");
+
+// TODO 19:
+body: construirTablaPdf(),
+
+// TODO 20:
+image: imagenGrafico,
+
+// =====================================================
+// EXTRA PDF (AMPLIACIÓN)
+// =====================================================
+
+// TODO 26:
+// Calcular total global de eventos
+function calcularTotalEventos() {
+  let total = 0;
+  for (let i in estadisticas) {
+    for (let e in estadisticas[i]) {
+      total += estadisticas[i][e];
+    }
+  }
+  return total;
+}
+
+// TODO 27:
+// Añadir fila TOTAL en la tabla PDF
+[
+  { text: "TOTAL", colSpan: 2 }, {},
+  calcularTotalEventos()
+]
+
+// =====================================================
+// EVENTOS PDF
+// =====================================================
+
+// TODO 21:
+botonVerPdf.onclick = () => {
+  const img = generarImagenGrafico();
+  const doc = crearDocumentoPdf(img);
+
+  pdfMake.createPdf(doc).getBlob((blob) => {
+    iframe.src = URL.createObjectURL(blob);
+  });
+};
+
+// TODO 22:
+botonAbrirPdf.onclick = () => {
+  const img = generarImagenGrafico();
+  const doc = crearDocumentoPdf(img);
+  pdfMake.createPdf(doc).open();
+};
+
+// =====================================================
+// AMPLIACIONES PROBABLES EXAMEN
+// =====================================================
+
+// TODO 23:
+// Tercer input (mismo patrón)
+input3.addEventListener("focus", () => {
+  estadisticas.input3.focus++;
+});
+
+// TODO 24:
+// Evento input
+input1.addEventListener("input", () => {
+  estadisticas.input1.input++;
+});
+
+// TODO 25:
+// Validación teléfono
+const regexTelefono = /^[0-9]{9}$/;
+
+</script>

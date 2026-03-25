@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Informe desde JSON - pdfmake</title>
+
+  <!-- pdfmake -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      margin: 24px;
+    }
+
+    .controls {
+      padding: 12px;
+      background: #f7f7f7;
+      border: 1px solid #ddd;
+      margin-bottom: 12px;
+    }
+
+    button {
+      margin-right: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    iframe {
+      width: 100%;
+      height: 520px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Informe de ventas desde JSON</h1>
+
+  <div class="controls">
+
+    <label>
+      Producto:
+      <input type="text" id="producto">
+    </label>
+
+    <label>
+      Cantidad mínima:
+      <input type="number" id="minCantidad" value="0">
+    </label>
+
+    <button id="btnPreview">Ver incrustado</button>
+    <button id="btnOpenTab">Abrir en nueva pestaña</button>
+    <button id="btnDownload">Descargar PDF</button>
+    <button id="btnPrint">Imprimir</button>
+
+  </div>
+
+  <iframe id="viewer"></iframe>
+
+  <script>
+
+    let datos = [];
+
+    /* ==============================
+       CARGAR JSON
+    ============================== */
+
+    async function cargarDatos() {
+      const response = await fetch("ventasEjercicio.json");
+      datos = await response.json();
+
+      generarInforme();
+    }
+
+    /* ==============================
+       FILTRADO
+    ============================== */
+
+    function filtrarVentas(producto, minCantidad) {
+
+      const term = producto.toLowerCase();
+
+      return datos.ventas.filter(v => {
+        return (
+          (term === "" || v.producto.toLowerCase().includes(term)) &&
+          v.cantidad >= minCantidad
+          
+        );
+      });
+
+    }
+
+    /* ==============================
+       CONSTRUCCIÓN TABLA
+    ============================== */
+
+   function crearDocumento(rows) {
+      let totalVentas = 0;
+      const bodyTabla = [[
+        { text: "Mes", bold: true, fillColor: "#eeeeee" },
+        { text: "Vendedor", bold: true, fillColor: "#eeeeee" },
+        { text: "Producto", bold: true, fillColor: "#eeeeee" },
+        { text: "Precio", bold: true, fillColor: "#eeeeee", alignment: "right" },
+        { text: "Cant.", bold: true, fillColor: "#eeeeee", alignment: "center" },
+        { text: "Subtotal", bold: true, fillColor: "#eeeeee", alignment: "right" }
+      ]];
+
+      rows.forEach(v => {
+        totalVentas += v.subtotal;
+        bodyTabla.push([
+        v.mes,
+        v.vendedor,
+        v.producto,
+        { text: v.precio + " €", alignment: "right" },
+        { text: v.cantidad, alignment: "center" },
+        { text: v.subtotal + " €", alignment: "right" }
+      ]);
+      });
+      
+      bodyTabla.push([
+        { text: "TOTAL", colSpan: 5, alignment: "right", bold: true },
+        {},
+        {},
+        {},
+        {},
+        { text: totalVentas + " €", bold: true, alignment: "right" }
+      ]);
+
+      return {
+        header: function(currentPage, pageCount) {
+          return {
+            columns: [
+              { text: datos.empresa, margin: [40, 20, 0, 0], bold: true },
+              { text: datos.anio, alignment: "right", margin: [0, 20, 40, 0] }
+            ],
+            fontSize: 10, color: "#777"
+          };
+        },
+        pageMargins: [40, 60, 40, 60],
+        content: [
+          { text: "DETALLE DE OPERACIONES", style: "header", alignment: "center" },
+          {
+            table: {
+              headerRows: 1,
+              widths: [50, 60, "*", 50, 40, 60],
+              body: bodyTabla
+            },
+            layout: "lightHorizontalLines"
+          }
+        ],
+        styles: {
+          header: { fontSize: 16, bold: true, margin: [0, 0, 0, 12] }
+        }
+      };
+    }
+
+
+    /* ==============================
+       GENERAR INFORME
+    ============================== */
+
+    function obtenerParametros() {
+
+      const producto = document.getElementById("producto").value;
+      const minCantidad = parseInt(document.getElementById("minCantidad").value) || 0;
+
+      return { producto, minCantidad };
+
+    }
+
+    function generarInforme() {
+
+      const params = obtenerParametros();
+      const rows = filtrarVentas(params.producto, params.minCantidad);
+      const doc = crearDocumento(rows);
+
+      pdfMake.createPdf(doc).getBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        document.getElementById("viewer").src = url;
+      });
+
+    }
+
+    function abrirNuevaPestana() {
+
+      const params = obtenerParametros();
+      const rows = filtrarVentas(params.producto, params.minCantidad);
+      const doc = crearDocumento(rows);
+
+      pdfMake.createPdf(doc).open();
+
+    }
+
+    function descargarPDF() {
+
+      const params = obtenerParametros();
+      const rows = filtrarVentas(params.producto, params.minCantidad);
+      const doc = crearDocumento(rows);
+
+      pdfMake.createPdf(doc).download("informe_ventas.json.pdf");
+
+    }
+
+    function imprimirPDF() {
+
+      const params = obtenerParametros();
+      const rows = filtrarVentas(params.producto, params.minCantidad);
+      const doc = crearDocumento(rows);
+
+      pdfMake.createPdf(doc).print();
+
+    }
+
+    /* ==============================
+       EVENTOS
+    ============================== */
+
+    document.getElementById("btnPreview").addEventListener("click", generarInforme);
+
+    document.getElementById("btnOpenTab").addEventListener("click", abrirNuevaPestana);
+
+    document.getElementById("btnDownload").addEventListener("click", descargarPDF);
+
+    document.getElementById("btnPrint").addEventListener("click", imprimirPDF);
+
+    /* ==============================
+       INICIO
+    ============================== */
+
+    cargarDatos();
+
+  </script>
+
+</body>
+</html>
